@@ -1,11 +1,11 @@
 import { BarChart3, Columns3, LayoutList, Settings, ShieldQuestion, Ticket } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 
 const navItems = [
-  { label: 'Roadmap', icon: BarChart3, active: false },
-  { label: 'Backlog', icon: LayoutList, active: false },
-  { label: 'Board', icon: Columns3, active: true },
-  { label: 'Reports', icon: BarChart3, active: false },
-  { label: 'Issues', icon: Ticket, active: false },
+  { label: 'Projects', icon: LayoutList, to: '/projects' },
+  { label: 'Board', icon: Columns3, to: '/board' },
+  { label: 'Dashboard', icon: BarChart3, to: '/dashboard' },
+  { label: 'Issues', icon: Ticket, to: '/board' },
 ]
 
 export function Sidebar() {
@@ -29,19 +29,18 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon
           return (
-            <a
+            <NavLink
               key={item.label}
-              href="#"
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-[13px] leading-[1.6] transition-colors ${
-                item.active
+              to={item.to}
+              className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 text-[13px] leading-[1.6] transition-colors ${
+                isActive
                   ? 'bg-surface_container_lowest text-primary shadow-air'
                   : 'text-outline_variant hover:bg-surface_container_high hover:text-inverse_surface'
               }`}
-              aria-current={item.active ? 'page' : undefined}
             >
               <Icon className="h-[18px] w-[18px]" />
               {item.label}
-            </a>
+            </NavLink>
           )
         })}
       </nav>

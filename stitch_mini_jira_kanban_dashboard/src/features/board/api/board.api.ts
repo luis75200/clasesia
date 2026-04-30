@@ -1,22 +1,14 @@
 import type { MovePayload } from '../types/board.types'
-
-interface SimulatedMoveOptions {
-  delayMs?: number
-  failRate?: number
-}
+import { changeTaskStatus } from '../../../lib/api'
 
 export async function simulateMoveRequest(
-  _move: MovePayload,
-  options: SimulatedMoveOptions = {},
+  move: MovePayload,
+  currentVersion = 1,
 ) {
-  const delayMs = options.delayMs ?? 1200
-  const failRate = options.failRate ?? 0.25
+  const response = await changeTaskStatus(move.taskId, {
+    status: move.toColumnId,
+    version: currentVersion,
+  })
 
-  await new Promise((resolve) => setTimeout(resolve, delayMs))
-
-  if (Math.random() < failRate) {
-    throw new Error('Simulated backend failure while moving ticket')
-  }
-
-  return { ok: true as const, serverVersion: Date.now() }
+  return { ok: true as const, serverVersion: response.data.version }
 }

@@ -50,6 +50,7 @@ export function useBoardDndController() {
 
     const opId = crypto.randomUUID()
     const inverseMove = invertMove(move)
+    const currentTaskVersion = storeState.tasksById[move.taskId]?.version ?? 1
 
     addOptimisticMove(move)
     useBoardStore.getState().markOpPending({
@@ -61,7 +62,7 @@ export function useBoardDndController() {
     })
 
     try {
-      await simulateMoveRequest(move)
+      await simulateMoveRequest(move, currentTaskVersion)
       useBoardStore.getState().applyMoveLocal(move)
       useBoardStore.getState().markOpResolved(opId)
     } catch (error) {
