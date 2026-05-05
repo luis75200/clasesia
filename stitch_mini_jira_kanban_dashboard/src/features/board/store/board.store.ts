@@ -14,73 +14,85 @@ interface BoardStore extends BoardState {
   taskErrors: Record<string, string | undefined>
   isSyncing: boolean
   lastError?: string
+  hydrateFromApi: (tasks: Array<Task & { status: ColumnId }>) => void
   applyMoveLocal: (move: MovePayload) => void
+  syncTaskVersion: (taskId: string, version: number) => void
   revertMoveLocal: (inverseMove: MovePayload) => void
   markOpPending: (op: PendingMoveOp) => void
   markOpResolved: (opId: string) => void
   markOpFailed: (opId: string, error: string) => void
 }
 
-const seedTasks: Task[] = [
-  {
-    id: 'TASK-100',
-    title: 'Configurar OAuth corporativo',
-    priority: 'HIGH',
-    isBlocked: false,
-    labels: ['auth'],
-    assignees: [{ id: 'u1', name: 'Laura' }],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'TASK-101',
-    title: 'Diseñar flujo de estados Kanban',
-    priority: 'MEDIUM',
-    isBlocked: false,
-    labels: ['board'],
-    assignees: [{ id: 'u2', name: 'Marcos' }],
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'TASK-102',
-    title: 'Validar export CSV con filtros',
-    priority: 'LOW',
-    isBlocked: true,
-    labels: ['metrics'],
-    assignees: [{ id: 'u3', name: 'Sofia' }],
-    updatedAt: new Date().toISOString(),
-  },
-]
-
-const tasksById = seedTasks.reduce<Record<string, Task>>((acc, task) => {
-  acc[task.id] = task
-  return acc
-}, {})
-
 const createInitialColumns = (): Record<ColumnId, { id: ColumnId; title: string; taskIds: string[] }> => ({
-  TODO: { id: 'TODO', title: 'Por hacer', taskIds: ['TASK-100', 'TASK-101'] },
-  IN_PROGRESS: { id: 'IN_PROGRESS', title: 'En progreso', taskIds: ['TASK-102'] },
+  TODO: { id: 'TODO', title: 'Por hacer', taskIds: [] },
+  IN_PROGRESS: { id: 'IN_PROGRESS', title: 'En progreso', taskIds: [] },
   REVIEW: { id: 'REVIEW', title: 'Review', taskIds: [] },
   DONE: { id: 'DONE', title: 'Listo', taskIds: [] },
 })
 
+function buildColumnsFromTasks(tasks: Array<Task & { status: ColumnId }>) {
+  const columns = createInitialColumns()
+
+  for (const task of tasks) {
+    columns[task.status].taskIds.push(task.id)
+  }
+
+  return columns
+}
+
+function buildTasksById(tasks: Array<Task & { status: ColumnId }>) {
+  return tasks.reduce<Record<string, Task>>((acc, task) => {
+    const { status: _status, ...taskWithoutStatus } = task
+    acc[task.id] = taskWithoutStatus
+    return acc
+  }, {})
+}
+
 export const useBoardStore = create<BoardStore>((set) => ({
   columnsById: createInitialColumns(),
   columnOrder: ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'],
-  tasksById,
+  tasksById: {},
   pendingOps: {},
   taskSyncStatus: {},
   taskErrors: {},
   isSyncing: false,
+  hydrateFromApi: (tasks) =>
+    set(() => ({
+      columnsById: buildColumnsFromTasks(tasks),
+      tasksById: buildTasksById(tasks),
+      pendingOps: {},
+      taskSyncStatus: {},
+      taskErrors: {},
+      isSyncing: false,
+      lastError: undefined,
+    })),
   applyMoveLocal: (move) =>
     set((state) => {
       const nextState = applyMove(state, move)
+      const currentVersion = nextState.tasksById[move.taskId]?.version ?? 1
       return {
         ...nextState,
         tasksById: {
           ...nextState.tasksById,
           [move.taskId]: {
             ...nextState.tasksById[move.taskId],
+            version: currentVersion + 1,
             updatedAt: new Date().toISOString(),
+          },
+        },
+      }
+    }),
+  syncTaskVersion: (taskId, version) =>
+    set((state) => {
+      const task = state.tasksById[taskId]
+      if (!task) return {}
+
+      return {
+        tasksById: {
+          ...state.tasksById,
+          [taskId]: {
+            ...task,
+            version,
           },
         },
       }

@@ -5,15 +5,26 @@
 
 import { ticketsRepository } from './tickets.repository.js';
 import {
+  ChangeTicketStatusInput,
   CreateTicketInput,
   ListTicketsFilters,
   ListTicketsResult,
   TicketWithDetails,
+  UpdateTicketInput,
 } from './tickets.types.js';
 import { Errors } from '../../lib/http/api-error.js';
 import { validateDateRange } from './tickets.validation.js';
 
 export class TicketsService {
+  private assertCanEditTicket(
+    actor: { id: string; role: 'admin' | 'member' },
+    ticket: TicketWithDetails
+  ) {
+    if (actor.role === 'member' && ticket.created_by.id !== actor.id) {
+      throw Errors.FORBIDDEN('No puedes editar tickets creados por otro usuario');
+    }
+  }
+
   /**
    * Lista tickets con filtros y paginación
    * Try-catch interno sin exponer trazas
@@ -142,6 +153,114 @@ export class TicketsService {
       console.error('[TicketsService.createTicket]', error);
       throw Errors.INTERNAL_ERROR(
         'Error al crear ticket',
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  async changeTicketStatus(
+    ticketId: string,
+    input: ChangeTicketStatusInput,
+    actor: { id: string; role: 'admin' | 'member' }
+  ): Promise<TicketWithDetails> {
+    try {
+      const existing = await ticketsRepository.getTicketWithDetails(ticketId);
+      if (!existing || existing.archived_at) {
+        throw Errors.NOT_FOUND('Ticket');
+      }
+
+      this.assertCanEditTicket(actor, existing);
+
+      const updatedRows = await ticketsRepository.updateStatusWithVersion(
+        ticketId,
+        input.status,
+        input.version
+      );
+
+      if (updatedRows === 0) {
+        throw Errors.CONFLICT('Conflicto de versión. El ticket fue modificado por otro usuario.');
+      }
+
+      const updated = await ticketsRepository.getTicketWithDetails(ticketId);
+      if (!updated) {
+        throw Errors.INTERNAL_ERROR('No se pudo recuperar ticket actualizado');
+      }
+
+      return updated;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ApiError') {
+        throw error;
+      }
+
+      console.error('[TicketsService.changeTicketStatus]', error);
+      throw Errors.INTERNAL_ERROR(
+        'Error al cambiar estado de ticket',
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  async updateTicket(
+    ticketId: string,
+    input: UpdateTicketInput,
+    actor: { id: string; role: 'admin' | 'member' }
+  ): Promise<TicketWithDetails> {
+    try {
+      const existing = await ticketsRepository.getTicketWithDetails(ticketId);
+      if (!existing || existing.archived_at) {
+        throw Errors.NOT_FOUND('Ticket');
+      }
+
+      this.assertCanEditTicket(actor, existing);
+
+      const updatedRows = await ticketsRepository.updateWithVersion(ticketId, input);
+      if (updatedRows === 0) {
+        throw Errors.CONFLICT('Conflicto de versión. El ticket fue modificado por otro usuario.');
+      }
+
+      const updated = await ticketsRepository.getTicketWithDetails(ticketId);
+      if (!updated) {
+        throw Errors.INTERNAL_ERROR('No se pudo recuperar ticket actualizado');
+      }
+
+      return updated;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ApiError') {
+        throw error;
+      }
+
+      console.error('[TicketsService.updateTicket]', error);
+      throw Errors.INTERNAL_ERROR(
+        'Error al actualizar ticket',
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  async archiveTicket(
+    ticketId: string,
+    actor: { id: string; role: 'admin' | 'member' }
+  ): Promise<void> {
+    try {
+      const existing = await ticketsRepository.getTicketWithDetails(ticketId);
+      if (!existing || existing.archived_at) {
+        throw Errors.NOT_FOUND('Ticket');
+      }
+
+      this.assertCanEditTicket(actor, existing);
+
+      const updatedRows = await ticketsRepository.archiveTicket(ticketId);
+      if (updatedRows === 0) {
+        throw Errors.NOT_FOUND('Ticket');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ApiError') {
+        throw error;
+      }
+
+      console.error('[TicketsService.archiveTicket]', error);
+      throw Errors.INTERNAL_ERROR(
+        'Error al archivar ticket',
         error instanceof Error ? error : undefined
       );
     }

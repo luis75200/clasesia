@@ -45,10 +45,13 @@ export function Sidebar() {
         })}
       </nav>
 
-      <button className="mb-8 mt-4 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary_dim px-4 py-2.5 text-[13px] font-semibold text-surface_container_lowest shadow-air active:scale-[0.98] transition-transform">
+      <NavLink
+        to="/board"
+        className="mb-8 mt-4 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary_dim px-4 py-2.5 text-[13px] font-semibold text-surface_container_lowest shadow-air active:scale-[0.98] transition-transform"
+      >
         <span className="text-[18px] leading-none">+</span>
         Create Issue
-      </button>
+      </NavLink>
 
       <div className="space-y-1 border-t border-outline_variant/10 pt-4">
         <a

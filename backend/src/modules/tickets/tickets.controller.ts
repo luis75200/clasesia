@@ -6,8 +6,10 @@
 import { Request, Response } from 'express';
 import { ticketsService } from './tickets.service.js';
 import {
+  changeTicketStatusBodySchema,
   listTicketsQuerySchema,
   createTicketBodySchema,
+  updateTicketBodySchema,
 } from './tickets.validation.js';
 import { ZodIssue } from 'zod';
 import { Errors } from '../../lib/http/api-error.js';
@@ -113,6 +115,108 @@ export const getTicketHandler = async (
 
   res.status(200).json({
     data: ticket,
+    requestId: req.requestId,
+  });
+};
+
+/**
+ * POST /api/tickets/:id/change-status
+ * Cambia estado de ticket con optimistic locking (version)
+ */
+export const changeTicketStatusHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  if (!req.user) {
+    throw Errors.UNAUTHORIZED();
+  }
+
+  const { id } = req.params;
+  const bodyResult = changeTicketStatusBodySchema.safeParse(req.body);
+
+  if (!bodyResult.success) {
+    const errors = bodyResult.error.errors.reduce(
+      (acc: Record<string, string>, err: ZodIssue) => {
+        const field = String(err.path[0]);
+        acc[field] = err.message;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    throw Errors.VALIDATION_ERROR(errors);
+  }
+
+  const updatedTicket = await ticketsService.changeTicketStatus(id, bodyResult.data, {
+    id: req.user.id,
+    role: req.user.role,
+  });
+
+  res.status(200).json({
+    data: updatedTicket,
+    requestId: req.requestId,
+  });
+};
+
+/**
+ * PATCH /api/tickets/:id
+ * Edita ticket completo con optimistic locking
+ */
+export const updateTicketHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  if (!req.user) {
+    throw Errors.UNAUTHORIZED();
+  }
+
+  const { id } = req.params;
+  const bodyResult = updateTicketBodySchema.safeParse(req.body);
+
+  if (!bodyResult.success) {
+    const errors = bodyResult.error.errors.reduce(
+      (acc: Record<string, string>, err: ZodIssue) => {
+        const field = String(err.path[0]);
+        acc[field] = err.message;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    throw Errors.VALIDATION_ERROR(errors);
+  }
+
+  const updatedTicket = await ticketsService.updateTicket(id, bodyResult.data, {
+    id: req.user.id,
+    role: req.user.role,
+  });
+
+  res.status(200).json({
+    data: updatedTicket,
+    requestId: req.requestId,
+  });
+};
+
+/**
+ * POST /api/tickets/:id/archive
+ * Elimina ticket en modo soft delete (archivado)
+ */
+export const archiveTicketHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  if (!req.user) {
+    throw Errors.UNAUTHORIZED();
+  }
+
+  const { id } = req.params;
+  await ticketsService.archiveTicket(id, {
+    id: req.user.id,
+    role: req.user.role,
+  });
+
+  res.status(200).json({
+    data: { success: true },
     requestId: req.requestId,
   });
 };

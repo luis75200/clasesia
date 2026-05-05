@@ -6,6 +6,8 @@ interface KanbanColumnProps {
   column: BoardColumnView
   taskSyncStatus: Record<string, 'idle' | 'pending' | 'error'>
   taskErrors: Record<string, string | undefined>
+  onToggleBlocked: (taskId: string) => void
+  onArchive: (taskId: string) => void
 }
 
 const dotClasses: Record<BoardColumnView['id'], string> = {
@@ -26,6 +28,8 @@ export function KanbanColumn({
   column,
   taskSyncStatus,
   taskErrors,
+  onToggleBlocked,
+  onArchive,
 }: KanbanColumnProps) {
   return (
     <section className="flex min-h-[500px] w-full flex-col gap-4">
@@ -69,6 +73,8 @@ export function KanbanColumn({
                       task={task}
                       isPending={taskSyncStatus[task.id] === 'pending'}
                       errorMessage={taskErrors[task.id]}
+                      onToggleBlocked={onToggleBlocked}
+                      onArchive={onArchive}
                     />
                   </div>
                 )}

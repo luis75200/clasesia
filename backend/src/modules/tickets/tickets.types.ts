@@ -51,3 +51,17 @@ export interface ListTicketsResult {
   skip: number;
   take: number;
 }
+
+export interface ChangeTicketStatusInput {
+  status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
+  version: number;
+}
+
+export interface UpdateTicketInput {
+  title?: string;
+  description?: string | null;
+  status?: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  is_blocked?: boolean;
+  version: number;
+}

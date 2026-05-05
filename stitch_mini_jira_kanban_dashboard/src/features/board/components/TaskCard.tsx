@@ -4,6 +4,8 @@ interface TaskCardProps {
   task: Task
   isPending?: boolean
   errorMessage?: string
+  onToggleBlocked: (taskId: string) => void
+  onArchive: (taskId: string) => void
 }
 
 const priorityClasses: Record<Task['priority'], string> = {
@@ -12,7 +14,7 @@ const priorityClasses: Record<Task['priority'], string> = {
   HIGH: 'bg-error_container/20 text-on_error_container',
 }
 
-export function TaskCard({ task, isPending, errorMessage }: TaskCardProps) {
+export function TaskCard({ task, isPending, errorMessage, onToggleBlocked, onArchive }: TaskCardProps) {
   return (
     <article
       className={`cursor-grab rounded-xl bg-surface_container_lowest p-5 shadow-air transition-all active:cursor-grabbing ${
@@ -33,6 +35,25 @@ export function TaskCard({ task, isPending, errorMessage }: TaskCardProps) {
               ? 'Medium'
               : 'Low Priority'}
         </span>
+      </div>
+
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onToggleBlocked(task.id)}
+          disabled={isPending}
+          className="rounded-lg bg-surface_container_low px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-outline_variant disabled:opacity-50"
+        >
+          {task.isBlocked ? 'Desbloquear' : 'Bloquear'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onArchive(task.id)}
+          disabled={isPending}
+          className="rounded-lg bg-surface_container_low px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-outline_variant disabled:opacity-50"
+        >
+          Archivar
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-outline_variant">

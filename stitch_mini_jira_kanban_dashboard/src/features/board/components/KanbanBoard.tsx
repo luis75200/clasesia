@@ -7,6 +7,8 @@ interface KanbanBoardProps {
   taskSyncStatus: Record<string, 'idle' | 'pending' | 'error'>
   taskErrors: Record<string, string | undefined>
   onDragEnd: (result: DropResult) => void | Promise<void>
+  onToggleBlocked: (taskId: string) => void
+  onArchive: (taskId: string) => void
 }
 
 export function KanbanBoard({
@@ -14,6 +16,8 @@ export function KanbanBoard({
   taskSyncStatus,
   taskErrors,
   onDragEnd,
+  onToggleBlocked,
+  onArchive,
 }: KanbanBoardProps) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -24,6 +28,8 @@ export function KanbanBoard({
             column={column}
             taskSyncStatus={taskSyncStatus}
             taskErrors={taskErrors}
+            onToggleBlocked={onToggleBlocked}
+            onArchive={onArchive}
           />
         ))}
       </div>

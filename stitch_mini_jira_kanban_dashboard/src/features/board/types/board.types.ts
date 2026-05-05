@@ -13,6 +13,7 @@ export interface Task {
   title: string
   priority: TaskPriority
   version?: number
+  createdById?: string
   isBlocked?: boolean
   labels?: string[]
   assignees?: Assignee[]

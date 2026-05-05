@@ -5,6 +5,7 @@ import { applyMove, invertMove } from '../lib/move.utils'
 import { selectBoardColumnsForView } from '../store/board.selectors'
 import { getBoardStateForOptimistic, useBoardStore } from '../store/board.store'
 import type { BoardState, MovePayload } from '../types/board.types'
+import { ApiClientError } from '../../../lib/api'
 
 function buildMoveFromDropResult(result: DropResult): MovePayload | null {
   const { source, destination, draggableId } = result
@@ -62,12 +63,19 @@ export function useBoardDndController() {
     })
 
     try {
-      await simulateMoveRequest(move, currentTaskVersion)
+      const result = await simulateMoveRequest(move, currentTaskVersion)
       useBoardStore.getState().applyMoveLocal(move)
+      useBoardStore.getState().syncTaskVersion(move.taskId, result.serverVersion)
       useBoardStore.getState().markOpResolved(opId)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown move error'
+
+      if (error instanceof ApiClientError && (error.status === 409 || error.code === 'CONFLICT')) {
+        useBoardStore.getState().markOpFailed(opId, `${message}. Se mantiene el cambio local.`)
+        return
+      }
+
       useBoardStore.getState().markOpFailed(opId, message)
       useBoardStore.getState().revertMoveLocal(inverseMove)
     }

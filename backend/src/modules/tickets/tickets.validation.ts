@@ -117,3 +117,12 @@ export const updateTicketBodySchema = z.object({
 });
 
 export type UpdateTicketBody = z.infer<typeof updateTicketBodySchema>;
+
+export const changeTicketStatusBodySchema = z
+  .object({
+    status: z.enum(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']),
+    version: z.coerce.number().int().min(1),
+  })
+  .strict();
+
+export type ChangeTicketStatusBody = z.infer<typeof changeTicketStatusBodySchema>;

@@ -1,6 +1,20 @@
 import { Bell, HelpCircle, Search, Settings } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { logout } from '../../lib/api'
 
 export function Topbar() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const logoutMutation = useMutation({
+    mutationFn: () => logout(),
+    onSettled: () => {
+      void queryClient.removeQueries({ queryKey: ['auth', 'session'] })
+      navigate('/login', { replace: true })
+    },
+  })
+
   return (
     <header className="sticky top-0 z-50 flex w-full items-center justify-between bg-surface/80 px-8 py-3 backdrop-blur-xl shadow-air">
       <div className="flex items-center gap-6">
@@ -30,6 +44,13 @@ export function Topbar() {
           </button>
         </div>
         <div className="mx-1 h-8 w-px bg-outline_variant/20" />
+        <button
+          type="button"
+          onClick={() => logoutMutation.mutate()}
+          className="rounded-xl bg-surface_container_low px-3 py-1.5 text-xs font-semibold text-outline_variant transition-colors hover:bg-surface_container_high hover:text-inverse_surface"
+        >
+          Salir
+        </button>
         <div className="h-8 w-8 rounded-full bg-surface_container_high ring-2 ring-surface shadow-air" />
       </div>
     </header>

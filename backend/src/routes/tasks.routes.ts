@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-router.get('/', asyncHandler(listTasksHandler));
+router.get('/', authMiddleware, asyncHandler(listTasksHandler));
 router.post('/', authMiddleware, asyncHandler(createTaskHandler));
 router.post('/:id/assign-project', authMiddleware, asyncHandler(assignTaskProjectHandler));
 

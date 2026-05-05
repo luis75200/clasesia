@@ -10,8 +10,8 @@ import {
   ticketLabels,
   users,
 } from '../../db/schema.js';
-import { eq, and, lt, gt, inArray, isNull, like, count as sqlCount } from 'drizzle-orm';
-import { CreateTicketInput, ListTicketsFilters, TicketWithDetails } from './tickets.types.js';
+import { eq, and, lt, gt, inArray, isNull, like, count as sqlCount, sql } from 'drizzle-orm';
+import { CreateTicketInput, ListTicketsFilters, TicketWithDetails, UpdateTicketInput } from './tickets.types.js';
 import { generateId } from '../../lib/utils/ids.js';
 
 export class TicketsRepository {
@@ -250,6 +250,74 @@ export class TicketsRepository {
       .where(inArray(users.id, userIds));
 
     return activeUsers.length === userIds.length;
+  }
+
+  async updateStatusWithVersion(
+    ticketId: string,
+    status: 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE',
+    version: number
+  ): Promise<number> {
+    const result = await db
+      .update(tickets)
+      .set({
+        status,
+        version: sql`${tickets.version} + 1`,
+        updated_at: new Date().toISOString(),
+      })
+      .where(and(eq(tickets.id, ticketId), eq(tickets.version, version)));
+
+    if (result && typeof result === 'object' && 'changes' in result) {
+      const changes = Number((result as { changes?: number }).changes ?? 0);
+      return Number.isFinite(changes) ? changes : 0;
+    }
+
+    return 0;
+  }
+
+  async updateWithVersion(
+    ticketId: string,
+    input: UpdateTicketInput
+  ): Promise<number> {
+    const updates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      version: sql`${tickets.version} + 1`,
+    };
+
+    if (typeof input.title === 'string') updates.title = input.title;
+    if (typeof input.description !== 'undefined') updates.description = input.description;
+    if (typeof input.status !== 'undefined') updates.status = input.status;
+    if (typeof input.priority !== 'undefined') updates.priority = input.priority;
+    if (typeof input.is_blocked !== 'undefined') updates.is_blocked = input.is_blocked;
+
+    const result = await db
+      .update(tickets)
+      .set(updates)
+      .where(and(eq(tickets.id, ticketId), eq(tickets.version, input.version), isNull(tickets.archived_at)));
+
+    if (result && typeof result === 'object' && 'changes' in result) {
+      const changes = Number((result as { changes?: number }).changes ?? 0);
+      return Number.isFinite(changes) ? changes : 0;
+    }
+
+    return 0;
+  }
+
+  async archiveTicket(ticketId: string): Promise<number> {
+    const result = await db
+      .update(tickets)
+      .set({
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        version: sql`${tickets.version} + 1`,
+      })
+      .where(and(eq(tickets.id, ticketId), isNull(tickets.archived_at)));
+
+    if (result && typeof result === 'object' && 'changes' in result) {
+      const changes = Number((result as { changes?: number }).changes ?? 0);
+      return Number.isFinite(changes) ? changes : 0;
+    }
+
+    return 0;
   }
 }
 

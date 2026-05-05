@@ -101,6 +101,11 @@ export interface ApiTask {
   priority: TaskPriority
   is_blocked: boolean
   version: number
+  created_by: {
+    id: string
+    name: string
+    handle: string
+  }
   labels: string[]
   assignees: ApiTaskAssignee[]
   updated_at: string
@@ -144,6 +149,20 @@ export interface ChangeTaskStatusInput {
 }
 
 export interface ChangeTaskStatusResponse {
+  data: ApiTask
+  requestId?: string
+}
+
+export interface UpdateTicketInput {
+  title?: string
+  description?: string | null
+  status?: ApiTaskStatus
+  priority?: TaskPriority
+  is_blocked?: boolean
+  version: number
+}
+
+export interface TicketMutationResponse {
   data: ApiTask
   requestId?: string
 }
@@ -192,6 +211,25 @@ export async function changeTaskStatus(
   return apiRequest<ChangeTaskStatusResponse>(`/api/tickets/${taskId}/change-status`, {
     method: 'POST',
     body: input,
+    signal,
+  })
+}
+
+export async function updateTicket(
+  ticketId: string,
+  input: UpdateTicketInput,
+  signal?: AbortSignal,
+): Promise<TicketMutationResponse> {
+  return apiRequest<TicketMutationResponse>(`/api/tickets/${ticketId}`, {
+    method: 'PATCH',
+    body: input,
+    signal,
+  })
+}
+
+export async function archiveTicket(ticketId: string, signal?: AbortSignal): Promise<{ data: { success: boolean }; requestId?: string }> {
+  return apiRequest<{ data: { success: boolean }; requestId?: string }>(`/api/tickets/${ticketId}/archive`, {
+    method: 'POST',
     signal,
   })
 }
@@ -325,4 +363,62 @@ export async function logout(signal?: AbortSignal): Promise<{ data: { success: b
     method: 'POST',
     signal,
   })
+}
+
+export interface MetricsSummary {
+  total: number
+  blocked: number
+  high_priority: number
+  by_status: {
+    TODO: number
+    IN_PROGRESS: number
+    REVIEW: number
+    DONE: number
+  }
+}
+
+export interface MetricsSummaryResponse {
+  data: MetricsSummary
+  requestId?: string
+}
+
+export interface MetricsQuery {
+  from_date?: string
+  to_date?: string
+}
+
+function toMetricsQueryString(query: MetricsQuery = {}) {
+  const params = new URLSearchParams()
+
+  if (query.from_date) params.set('from_date', query.from_date)
+  if (query.to_date) params.set('to_date', query.to_date)
+
+  const queryString = params.toString()
+  return queryString ? `?${queryString}` : ''
+}
+
+export async function getMetricsSummary(query: MetricsQuery = {}, signal?: AbortSignal): Promise<MetricsSummaryResponse> {
+  return apiRequest<MetricsSummaryResponse>(`/api/metrics/summary${toMetricsQueryString(query)}`, {
+    method: 'GET',
+    signal,
+  })
+}
+
+export async function exportMetricsCsv(query: MetricsQuery = {}): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/api/metrics/export.csv${toMetricsQueryString(query)}`, {
+    method: 'GET',
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    let payload: ApiErrorPayload = {}
+    try {
+      payload = (await response.json()) as ApiErrorPayload
+    } catch {
+      payload = { message: `HTTP ${response.status}` }
+    }
+    throw new ApiClientError(response.status, payload)
+  }
+
+  return response.blob()
 }

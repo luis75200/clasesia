@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes.js';
+import commentsRoutes from './comments.routes.js';
+import metricsRoutes from './metrics.routes.js';
 import projectsRoutes from './projects.routes.js';
 import tasksRoutes from './tasks.routes.js';
 import ticketsRoutes from './tickets.routes.js';
@@ -18,14 +20,14 @@ router.use('/tickets', ticketsRoutes);
 router.use('/tasks', tasksRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/auth', authRoutes);
+router.use('/metrics', metricsRoutes);
+router.use('/comments', commentsRoutes);
 
 /**
  * Módulos pendientes de implementación
  * 
- * router.use('/auth', authRoutes);
  * router.use('/users', usersRoutes);
  * router.use('/comments', commentsRoutes);
- * router.use('/metrics', metricsRoutes);
  * router.use('/archived', archivedRoutes);
  */
 
